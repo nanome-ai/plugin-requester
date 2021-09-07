@@ -1,0 +1,252 @@
+{
+  "proxies": {
+    "http": "",
+    "https": ""
+  },
+  "timeout": 30,
+  "endpoints": [
+    {
+      "name": "Authorization",
+      "description": "Get auth token from API",
+      "hidden": true,
+      "method": "POST",
+      "url": "http://localhost:3000/login",
+      "response": "json",
+      "headers": {
+        "user-agent": "Nanome"
+      },
+      "json": {
+        "username": "{{user}}",
+        "password": "{{pass}}"
+      },
+      "inputs": [
+        {
+          "name": "user",
+          "label": "Username",
+          "type": "text",
+          "placeholder": "Username"
+        },
+        {
+          "name": "pass",
+          "label": "Password",
+          "type": "password",
+          "placeholder": "Password"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "token",
+          "type": "str",
+          "path": "token.value",
+          "cache": true
+        }
+      ]
+    },
+
+    {
+      "name": "List Projects",
+      "description": "Get list of projects",
+      "hidden": true,
+      "method": "GET",
+      "url": "http://localhost:3000/projects",
+      "response": "json",
+      "headers": {
+        "authorization": "Bearer {{token}}"
+      },
+      "params": {
+        "public": "{{public}}"
+      },
+      "inputs": [
+        {
+          "name": "public",
+          "label": "Only public projects",
+          "type": "toggle",
+          "values": ["no", "yes"]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "projects",
+          "type": "list",
+          "path": "projects",
+          "cache": false
+        }
+      ]
+    },
+
+    {
+      "name": "Project Details",
+      "description": "Load project from list",
+      "method": "GET",
+      "url": "http://localhost:3000/projects/{{project}}/details",
+      "response": "json",
+      "headers": {
+        "authorization": "Bearer {{token}}"
+      },
+      "inputs": [
+        {
+          "name": "project",
+          "label": "Project",
+          "type": "dropdown",
+          "items": "{{projects}}"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "project_name",
+          "label": "Project Name",
+          "type": "str",
+          "path": "name"
+        },
+        {
+          "name": "project_files",
+          "label": "Project Files",
+          "type": "list",
+          "path": "files"
+        }
+      ]
+    },
+
+    {
+      "name": "Load File",
+      "description": "Load a file from cloud storage",
+      "method": "GET",
+      "url": "http://localhost:3000/files/{{file_id}}",
+      "response": "file",
+      "headers": {
+        "authorization": "Bearer {{token}}"
+      },
+      "inputs": [
+        {
+          "name": "file_id",
+          "label": "File ID",
+          "type": "text",
+          "placeholder": "123"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "file_{{file_id}}.sdf",
+          "type": "file",
+          "path": ""
+        }
+      ]
+    },
+
+    {
+      "name": "Generate Conformers",
+      "description": "Generate conformers for a molecular structure",
+      "method": "POST",
+      "url": "http://localhost:3000/conformers",
+      "response": "file",
+      "headers": {
+        "authorization": "Bearer {{token}}"
+      },
+      "files": {
+        "file": "{{molecule}}"
+      },
+      "inputs": [
+        {
+          "name": "name",
+          "label": "Output Name",
+          "type": "text",
+          "placeholder": "name"
+        },
+        {
+          "name": "molecule",
+          "label": "Molecule",
+          "type": "sdf"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "{{name}}.sdf",
+          "type": "file",
+          "path": ""
+        }
+      ]
+    },
+
+    {
+      "name": "Chemical Properties",
+      "description": "Get chemical properties for a molecular structure",
+      "method": "POST",
+      "url": "http://localhost:3000/properties",
+      "response": "json",
+      "headers": {
+        "authorization": "Bearer {{token}}"
+      },
+      "files": {
+        "file": "{{molecule}}"
+      },
+      "inputs": [
+        {
+          "name": "molecule",
+          "label": "Molecule",
+          "type": "sdf"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MW",
+          "label": "MW",
+          "type": "str",
+          "path": "properties.mw"
+        },
+        {
+          "name": "logP",
+          "label": "log P",
+          "type": "str",
+          "path": "properties.log_p"
+        },
+        {
+          "name": "TPSA",
+          "label": "TPSA",
+          "type": "str",
+          "path": "properties.tpsa"
+        }
+      ]
+    },
+
+    {
+      "name": "Chemical Properties (text)",
+      "description": "Get chemical properties for a molecular structure",
+      "method": "POST",
+      "url": "http://localhost:3000/properties-text",
+      "response": "text",
+      "headers": {
+        "authorization": "Bearer {{token}}"
+      },
+      "files": {
+        "file": "{{molecule}}"
+      },
+      "inputs": [
+        {
+          "name": "molecule",
+          "label": "Molecule",
+          "type": "sdf"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MW",
+          "label": "MW",
+          "type": "str",
+          "regex": "MW: (-?\\d+)"
+        },
+        {
+          "name": "logP",
+          "label": "log P",
+          "type": "str",
+          "regex": "logP: (-?\\d+)"
+        },
+        {
+          "name": "TPSA",
+          "label": "TPSA",
+          "type": "str",
+          "regex": "TPSA: (-?\\d+)"
+        }
+      ]
+    }
+  ]
+}
