@@ -16,10 +16,10 @@ try:
         CONFIG = json.load(f)
 
 except FileNotFoundError:
-    Logs.error('Could not find config file at: ' + CONFIG_PATH)
+    raise Exception('Could not find config file at: ' + CONFIG_PATH)
 
 except json.decoder.JSONDecodeError:
-    Logs.error('Config file is not a valid JSON file.')
+    raise Exception('Config file is not a valid JSON file')
 
 # validate config
 if 'endpoints' not in CONFIG:
