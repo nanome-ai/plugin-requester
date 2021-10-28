@@ -1,5 +1,6 @@
 import nanome
 from nanome.util import async_callback
+from nanome.util.enums import NotificationTypes
 
 from .API import API
 
@@ -38,9 +39,9 @@ class Requester(nanome.AsyncPluginInstance):
 
         ln_continue = ln_buttons.create_child_node()
         ln_continue.set_padding(left=0.005)
-        btn_continue = ln_continue.add_new_button('continue')
-        btn_continue.disable_on_press = True
-        btn_continue.register_pressed_callback(self.continue_request)
+        self.btn_continue = ln_continue.add_new_button('continue')
+        self.btn_continue.disable_on_press = True
+        self.btn_continue.register_pressed_callback(self.continue_request)
 
         self.inputs = []
 
@@ -136,21 +137,28 @@ class Requester(nanome.AsyncPluginInstance):
             return
 
         for item, inp in self.inputs:
-            if item['type'] in ['number', 'password', 'text']:
-                self.api.set_input_value(item, inp.input_text)
+            try:
+                if item['type'] in ['number', 'password', 'text']:
+                    self.api.set_input_value(item, inp.input_text)
 
-            elif item['type'] == 'dropdown':
-                ddi = next(i for i in inp.items if i.selected)
-                self.api.set_input_value(item, ddi.name)
+                elif item['type'] == 'dropdown':
+                    ddi = next(i for i in inp.items if i.selected)
+                    self.api.set_input_value(item, ddi.name)
 
-            elif item['type'] == 'toggle':
-                self.api.set_input_value(item, inp.selected)
+                elif item['type'] == 'toggle':
+                    self.api.set_input_value(item, inp.selected)
 
-            elif item['type'] == 'molecule':
-                ddi = next(i for i in inp.items if i.selected)
-                format = nanome.util.enums.ExportFormats[item['format'].upper()]
-                results = await self.request_export(format, entities=[ddi.index])
-                self.api.set_input_value(item, results[0])
+                elif item['type'] == 'molecule':
+                    ddi = next(i for i in inp.items if i.selected)
+                    format = nanome.util.enums.ExportFormats[item['format'].upper()]
+                    results = await self.request_export(format, entities=[ddi.index])
+                    self.api.set_input_value(item, results[0])
+
+            except StopIteration:
+                msg = f'Please select an item for "{item["label"]}"'
+                self.send_notification(NotificationTypes.error, msg)
+                self.update_content(self.btn_continue)
+                return
 
         self.api.continue_request()
 
@@ -165,7 +173,7 @@ class Requester(nanome.AsyncPluginInstance):
 
             ln1 = ln.create_child_node()
             ln1.set_padding(right=0.01)
-            lbl = ln1.add_new_label(output['label'])
+            lbl = ln1.add_new_label(output.get('label', output['name']))
             lbl.text_max_size = 0.5
             lbl.text_vertical_align = lbl.VertAlignOptions.Middle
 

@@ -24,8 +24,8 @@ At minimum, each endpoint must contain `name`, `url`, `method`, and `response`. 
 | --- | --- |
 | `name` | Name used to identify the endpoint in the UI. |
 | `url` | URL of the endpoint. |
-| `method` | HTTP method used to make the request. (e.g. `GET`, `POST`, etc.) |
-| `response` | Response type to expect (`json`, `text`, `file`). |
+| `method` | HTTP method used to make the request. (e.g. `"GET"`, `"POST"`, etc.) |
+| `response` | Response type to expect (`"json"`/`"text"`/`"file"`). |
 | `hidden` | (optional) Bool to indicate whether or not the endpoint should be hidden from the UI. Useful for dependency endpoints such as for authentication. |
 | `headers` | (optional) Headers to be sent with the request. |
 | `params` | (optional) Query string parameters. |
@@ -41,11 +41,11 @@ Inputs are used to prompt the user for input before making the request. The `inp
 
 | Property | Description |
 | --- | --- |
-| `name` | Name of the input. (e.g. `molecule_id`) |
-| `type` | Type of the input. (`text`/`number`/`password`/`dropdown`/`toggle`/`molecule`) |
-| `label` | Label to display to the user. (e.g. `Molecule ID`) |
+| `name` | Name of the input. (e.g. `"molecule_id"`) |
+| `type` | Type of the input. (`"text"`/`"number"`/`"password"`/`"dropdown"`/`"toggle"`/`"molecule"`) |
+| `label` | Label to display to the user. (e.g. `"Molecule ID"`) |
 | `placeholder` | (optional) Placeholder text to display to the user. |
-| `format` | (only for `molecule`) Format of the molecule. (`pdb`/`sdf`/`mmcif`/`smiles`) |
+| `format` | (only for `molecule`) Format of the molecule. (`"pdb"`/`"sdf"`/`"mmcif"`/`"smiles"`) |
 | `items` | (only for `dropdown`) Array of items to display to the user. |
 | `values` | (only for `toggle`) Array of 2 values to be used for `Off`/`On`. (e.g. `["no", "yes"]`) |
 
@@ -55,11 +55,12 @@ Outputs are used to save values from the response for use in further requests, o
 
 | Property | Description |
 | --- | --- |
-| `name` | Name of the output. (e.g. `token`) |
-| `type` | Type of the output. (`str`/`list`/`file`) |
-| `path` | (only for `json` response) Object path to find the value. (e.g. `some.path[2].value`) |
-| `regex` | (only for `text` response) Regex with a capture group to find the value. (e.g. `value: (\\d+)`) |
-| `label` | (optional) Label to display to the user. (e.g. `Token`) |
+| `name` | Name of the output. (e.g. `"token"`) |
+| `type` | Type of the output. (`"str"`/`"list"`/`"file"`) |
+| `path` | (only for `json` response) Object path to find the value. (e.g. `"some.path[2].value"`) |
+| `regex` | (only for `text` response) Regex with a capture group to find the value. (e.g. `"value: (\\d+)"`) |
+| `label` | (optional) Label to display to the user. (e.g. `"Token"`) |
+| `cache` | (optional) Save the output for future requests while plugin is active. (e.g. `true`) |
 
 ### Replacement Tokens
 
@@ -85,8 +86,7 @@ Example:
       "outputs": [
         {
           "name": "project_{{project_id}}.nanome",
-          "type": "file",
-          "path": ""
+          "type": "file"
         }
       ]
     }
@@ -98,7 +98,7 @@ Example:
 
 Replacement tokens in a request may come from the output of another request. The plugin will automatically make the request for endpoints that have an output matching the replacement token. It is important to give each output a unique name to prevent ambiguity with other requests.
 
-A common depdendant request example is authorization:
+A common dependant request example is authorization. In the following config, the "Authorization" endpoint is hidden from the list in the plugin. When the plugin user makes a request to the "Download Molecule" endpoint, the plugin will automatically make a request to the "Authorization" endpoint to get the "token" value required for the authorization header.
 
 ```json
 {
@@ -152,14 +152,82 @@ A common depdendant request example is authorization:
       "outputs": [
         {
           "name": "{{molecule_id}}.sdf",
-          "type": "file",
-          "path": "",
+          "type": "file"
         }
       ]
     }
   ]
 }
 ```
+
+Another example is listing files in a project and loading one of them. In the following config, both the "List Projects" and "List Project Files" endpoints are hidden from the list in the plugin. When the plugin user makes a request to the "Load File from Project" endpoint, the plugin will automatically make a request to the "List Projects" endpoint to get the "projects" value required for the "Project" input of "List Project Files". It will then make a request to the "List Files" endpoint to get the "files" value required for the "File" input of "Load File from Project".
+
+```json
+{
+  "endpoints": [
+    {
+      "name": "List Projects",
+      "description": "Get list of projects",
+      "hidden": true,
+      "url": "http://example.com/projects",
+      "method": "GET",
+      "response": "json",
+      "outputs": [
+        {
+          "name": "projects",
+          "type": "list",
+          "path": "projects"
+        }
+      ]
+    },
+    {
+      "name": "List Project Files",
+      "description": "Get list of files in a project",
+      "hidden": true,
+      "url": "http://example.com/projects/{{project}}/files",
+      "method": "GET",
+      "response": "json",
+      "inputs": [
+        {
+          "name": "project",
+          "type": "dropdown",
+          "label": "Project",
+          "items": "{{projects}}"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "files",
+          "type": "list",
+          "path": "files"
+        }
+      ]
+    },
+    {
+      "name": "Load File from Project",
+      "url": "http://example.com/projects/{{project}}/files/{{file}}/sdf",
+      "method": "GET",
+      "response": "file",
+      "inputs": [
+        {
+          "name": "file",
+          "type": "dropdown",
+          "label": "File",
+          "items": "{{files}}"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "{{file}}.sdf",
+          "type": "file"
+        }
+      ]
+    }
+  ]
+}
+```
+
+More examples of replacement tokens and dependant requests are included in the example config file `config.example.json`.
 
 ### Proxy
 

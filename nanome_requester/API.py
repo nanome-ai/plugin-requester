@@ -7,15 +7,79 @@ import re
 import requests
 import tempfile
 
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), '..', 'config.json')
+CONFIG_PATH = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'config.json'))
 DEFAULT_TIMEOUT = 30
+
+# attempt to load config
+try:
+    with open(CONFIG_PATH, 'r') as f:
+        CONFIG = json.load(f)
+
+except FileNotFoundError:
+    raise Exception('Could not find config file at: ' + CONFIG_PATH)
+
+except json.decoder.JSONDecodeError:
+    raise Exception('Config file is not a valid JSON file')
+
+# validate config
+if 'endpoints' not in CONFIG:
+    raise Exception('Missing endpoints in config')
+
+ENDPOINTS = CONFIG['endpoints']
+for endpoint in ENDPOINTS:
+    for key in ['name', 'url', 'method', 'response']:
+        if key not in endpoint:
+            raise Exception(f'Endpoint missing key "{key}"')
+
+    name = endpoint['name']
+    prefix = f'Endpoint "{name}":'
+
+    if endpoint['response'] not in ['json', 'file', 'text']:
+            raise Exception(f'{prefix} Invalid response type "{endpoint["response"]}"')
+
+    for input in endpoint.get('inputs', []):
+        for key in ['name', 'type', 'label']:
+            if key not in input:
+                raise Exception(f'{prefix} Input missing key "{key}"')
+
+        if input['type'] not in ['text', 'number', 'password', 'dropdown', 'toggle', 'molecule']:
+            raise Exception(f'{prefix} Input "{input["name"]}" invalid type "{input["type"]}"')
+
+        if input['type'] == 'dropdown':
+            if 'items' not in input:
+                raise Exception(f'{prefix} Input "{input["name"]}" missing "items"')
+
+        if input['type'] == 'molecule':
+            if 'format' not in input:
+                raise Exception(f'{prefix} Input "{input["name"]}" missing "format"')
+
+            if input['format'] not in ['pdb', 'sdf', 'mmcif', 'smiles']:
+                raise Exception(f'{prefix} Input "{input["name"]}" invalid "format"')
+
+    for output in endpoint.get('outputs', []):
+        for key in ['name', 'type']:
+            if key not in output:
+                raise Exception(f'{prefix} Output missing key "{key}"')
+
+        if output['type'] not in ['str', 'list', 'file']:
+            raise Exception(f'{prefix} Invalid output type "{output["type"]}"')
+
+        if endpoint['response'] == 'json' and 'path' not in output:
+            raise Exception(f'{prefix} "json" response outputs must have "path"')
+
+        if endpoint['response'] != 'json' and 'path' in output:
+            raise Exception(f'{prefix} "{endpoint["response"]}" response outputs cannot have "path"')
+
+        if endpoint['response'] == 'text' and 'regex' not in output:
+            raise Exception(f'{prefix} "text" response outputs must have "regex"')
+
+        if endpoint['response'] != 'text' and 'regex' in output:
+            raise Exception(f'{prefix} "{endpoint["response"]}" response outputs cannot have "regex"')
 
 
 class API:
     def __init__(self, plugin):
         self.plugin = plugin
-        self.config = {}
-        self.endpoints = []
         self.requests = []
 
         self.inputs = {}
@@ -23,24 +87,6 @@ class API:
 
         self.session = requests.Session()
         self.temp_dir = tempfile.TemporaryDirectory()
-
-        # attempt to load config
-        try:
-            with open(CONFIG_PATH, 'r') as f:
-                self.config = json.load(f)
-            self.endpoints = self.config['endpoints']
-
-        except FileNotFoundError:
-            Logs.error('Could not find config file at: ' + CONFIG_PATH)
-
-        except json.decoder.JSONDecodeError:
-            Logs.error('Config file is not a valid JSON file.')
-
-        except KeyError:
-            Logs.error('Config file is missing endpoints.')
-
-        if not self.endpoints:
-            raise Exception('No endpoints found.')
 
     def reset(self):
         # start new session and clear temporary values
@@ -54,7 +100,7 @@ class API:
                 del self.cache[key]
 
     def get_endpoint_by_output(self, token):
-        for endpoint in self.endpoints:
+        for endpoint in ENDPOINTS:
             for output in endpoint.get('outputs', []):
                 if output['name'] == token:
                     return endpoint
@@ -65,7 +111,7 @@ class API:
 
     def list_endpoints(self):
         # list all non-hidden endpoints
-        return [e for e in self.endpoints if not e.get('hidden')]
+        return [e for e in ENDPOINTS if not e.get('hidden')]
 
     def init_request(self, endpoint=None):
         # start new request or continue request chain
@@ -108,8 +154,8 @@ class API:
 
         url = endpoint['url']
         method = endpoint['method']
-        proxies = self.config.get('proxies')
-        timeout = self.config.get('timeout', DEFAULT_TIMEOUT)
+        proxies = CONFIG.get('proxies')
+        timeout = CONFIG.get('timeout', DEFAULT_TIMEOUT)
         headers = endpoint.get('headers')
         params = endpoint.get('params')
         files_body = endpoint.get('files')
