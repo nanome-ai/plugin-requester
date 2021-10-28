@@ -127,8 +127,7 @@
       "outputs": [
         {
           "name": "file_{{file_id}}.sdf",
-          "type": "file",
-          "path": ""
+          "type": "file"
         }
       ]
     },
@@ -155,14 +154,14 @@
         {
           "name": "molecule",
           "label": "Molecule",
-          "type": "sdf"
+          "type": "molecule",
+          "format": "sdf"
         }
       ],
       "outputs": [
         {
           "name": "{{name}}.sdf",
-          "type": "file",
-          "path": ""
+          "type": "file"
         }
       ]
     },
@@ -183,7 +182,8 @@
         {
           "name": "molecule",
           "label": "Molecule",
-          "type": "sdf"
+          "type": "molecule",
+          "format": "sdf"
         }
       ],
       "outputs": [
@@ -224,7 +224,8 @@
         {
           "name": "molecule",
           "label": "Molecule",
-          "type": "sdf"
+          "type": "molecule",
+          "format": "sdf"
         }
       ],
       "outputs": [

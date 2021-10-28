@@ -85,8 +85,7 @@ Example:
       "outputs": [
         {
           "name": "project_{{project_id}}.nanome",
-          "type": "file",
-          "path": ""
+          "type": "file"
         }
       ]
     }
@@ -152,8 +151,7 @@ A common depdendant request example is authorization:
       "outputs": [
         {
           "name": "{{molecule_id}}.sdf",
-          "type": "file",
-          "path": "",
+          "type": "file"
         }
       ]
     }
