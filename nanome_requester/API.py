@@ -165,7 +165,7 @@ class API:
         try:
             r = self.session.request(
                 method, url, proxies=proxies, timeout=timeout, headers=headers,
-                params=params, files=files_body, data=data_body, json=json_body)
+                params=params, files=files_body, data=data_body, json=json_body, verify=False)
         except requests.exceptions.ConnectionError:
             self.handle_error('Connection error, check proxy settings.')
             return
